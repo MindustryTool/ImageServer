@@ -143,7 +143,22 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
 	urlPath := CleanURL(w, r.URL.Path)[1:]
 
-	err := os.Remove(urlPath)
+	if _, err := os.Stat(urlPath); os.IsNotExist(err) {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	tempPath := urlPath + ".deleting"
+	if err := os.Rename(urlPath, tempPath); err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, "File not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Error preparing file deletion: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	err := os.Remove(tempPath)
 	if err != nil {
 		http.Error(w, "Error deleting file: "+err.Error(), http.StatusBadRequest)
 		return
