@@ -77,7 +77,7 @@ func (fs DotFileHidingFileSystem) Open(name string) (http.File, error) {
 	}
 
 	if !supported_types.Has(stat.Name()) {
-
+		return nil, os.ErrPermission
 	}
 
 
@@ -112,31 +112,47 @@ func HandleRequest(dirname string) http.HandlerFunc {
 	}
 }
 
-func PostImage(w http.ResponseWriter, r *http.Request) {
-	dirPath := filepath.Dir(r.URL.Path)[1:]
-	if err := os.MkdirAll(dirPath, 0755); err != nil {
-		http.Error(w, "Error creating folders: "+err.Error(), http.StatusInternalServerError)
+func PostImage(w http.ResponseWriter, r *http.Request) {	
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Error parsing form", http.StatusBadRequest)
 		return
 	}
 
-	filePath := filepath.Join(dirPath, filepath.Base(r.URL.Path))
+	folder := r.FormValue("folder")
+	id := r.FormValue("id")
+
+	if (folder == ""){
+		http.Error(w, "Invalid folder", http.StatusInternalServerError)
+	}
+	
+	folderPath := filepath.Join(Config.Path, folder)
+	
+ 	err :=	os.MkdirAll(folderPath, 0755)
+
+	if err != nil {
+		http.Error(w, "Error creating folder: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	filePath := filepath.Join(folderPath, id)
+
 	file, err := os.Create(filePath)
+	
 	if err != nil {
 		http.Error(w, "Error creating file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	defer file.Close()
 
-	if err := r.ParseMultipartForm(100 << 20); err != nil {
-		http.Error(w, "Error parsing form", http.StatusBadRequest)
-		return
-	}
 
 	fileUploaded, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Error retrieving file", http.StatusBadRequest)
 		return
 	}
+
 	defer fileUploaded.Close()
 
 	if _, err := io.Copy(file, fileUploaded); err != nil {
@@ -144,7 +160,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Successfully saved: %s", r.URL.Path)
+	fmt.Fprintf(w, "Successfully saved: %s", filePath)
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
@@ -153,25 +169,6 @@ func DeleteImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error deleting file: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	dirPath := filepath.Dir(filePath)
-	for dirPath != "." {
-		isEmpty, err := IsDirEmpty(dirPath)
-		if err != nil {
-			http.Error(w, "Error checking directory: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if isEmpty {
-			if err = os.Remove(dirPath); err != nil {
-				http.Error(w, "Error deleting directory: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			break
-		}
-		dirPath = filepath.Dir(dirPath)
-	}
-
 	fmt.Fprintf(w, "Successfully deleted: %s", filePath)
 }
 
@@ -189,10 +186,22 @@ func main() {
 	InitFlags()
 	dirname, err := filepath.Abs(Config.Path)
 	if err != nil {
-		log.Fatalf("Could not get absolute path: %s", err)
+		log.Fatalf("Could not get absolute path: %s\n", err)
 	}
-	log.Printf("Serving %s on port %s", dirname, Config.Port)
+
+	dirPath := filepath.Dir(Config.Path)
+	
+	if Config.Path != "." {
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			log.Fatalf("Can not make dir %s %s\n", Config.Path, err)
+		}
+	}
+
+	
+	log.Printf("Serving %s on port %s\n", dirname, Config.Port)
+
+
 	if err := http.ListenAndServe(":"+Config.Port, HandleRequest(dirname)); err != nil {
-		log.Fatalf("Could not start server: %s", err)
+		log.Fatalf("Could not start server: %s\n", err)
 	}
 }
