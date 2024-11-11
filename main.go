@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	servePath     = flag.String("path", ".", "path to the folder to serve. Defaults to the current folder")
-	port     = flag.String("port", "8080", "port to serve on. Defaults to 8080")
-	username = os.Getenv("USERNAME")
-	password = os.Getenv("PASSWORD")
+	servePath = flag.String("path", ".", "path to the folder to serve. Defaults to the current folder")
+	port      = flag.String("port", "8080", "port to serve on. Defaults to 8080")
+	username  = os.Getenv("USERNAME")
+	password  = os.Getenv("PASSWORD")
 )
 
 func ContainsDotFile(name string) bool {
@@ -64,15 +64,15 @@ func (fileSystem DotFileHidingFileSystem) Open(name string) (http.File, error) {
 func Serve(dirname string, port string) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fileSystem := DotFileHidingFileSystem{http.Dir(dirname)}
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			http.FileServer(fileSystem).ServeHTTP(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			BasicAuth(PostImage).ServeHTTP(w, r)
-		} else if r.Method == http.MethodDelete {
+		case http.MethodDelete:
 			BasicAuth(DeleteImage).ServeHTTP(w, r)
-		} else {
+		default:
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-			return
 		}
 	})
 
