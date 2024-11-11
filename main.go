@@ -107,12 +107,14 @@ func (fs DotFileHidingFileSystem) Open(name string) (http.File, error) {
 func BasicAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
+		
 		if !ok || u != Config.Username || p != Config.Password {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-
+			log.Printf("%s %s\n%s %s\n", u, p, Config.Username, Config.Password)
 			return
 		}
+
 		handler(w, r)
 	}
 }
