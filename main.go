@@ -50,12 +50,12 @@ func InitFlags() {
 		Config.Port = "5000" 
 	}
 
-	Config.Username = os.Getenv("USERNAME")
+	Config.Username = os.Getenv("SERVER_USERNAME")
 	if Config.Username == "" {
 		Config.Username = "admin" 
 	}
 
-	Config.Password = os.Getenv("PASSWORD")
+	Config.Password = os.Getenv("SERVER_PASSWORD")
 	if Config.Password == "" {
 		Config.Password = "password" 
 	}
