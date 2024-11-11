@@ -5,19 +5,21 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
 
 var (
-	path     = flag.String("path", ".", "path to the folder to serve. Defaults to the current folder")
+	servePath     = flag.String("path", ".", "path to the folder to serve. Defaults to the current folder")
 	port     = flag.String("port", "8080", "port to serve on. Defaults to 8080")
-	username = "admin"
-	password = "password"
+	username = os.Getenv("USERNAME")
+	password = os.Getenv("PASSWORD")
 )
 
 func ContainsDotFile(name string) bool {
@@ -60,11 +62,10 @@ func (fileSystem DotFileHidingFileSystem) Open(name string) (http.File, error) {
 }
 
 func Serve(dirname string, port string) error {
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fileSystem := DotFileHidingFileSystem{http.Dir(dirname)}
 		if r.Method == http.MethodGet {
-			http.FileServer(fileSystem)
+			http.FileServer(fileSystem).ServeHTTP(w, r)
 		} else if r.Method == http.MethodPost {
 			BasicAuth(PostImage).ServeHTTP(w, r)
 		} else if r.Method == http.MethodDelete {
@@ -91,14 +92,22 @@ func BasicAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func PostImage(w http.ResponseWriter, r *http.Request) {
-	dirPath := filepath.Dir(r.URL.Path)[1:]
-	err := os.MkdirAll(dirPath, 0755)
+	parsedURL, err := url.Parse(r.URL.Path)
+	if err != nil {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	cleanPath := path.Clean(parsedURL.Path)
+	urlPath := cleanPath[1:]
+
+	dirPath := filepath.Dir(urlPath)
+	err = os.MkdirAll(dirPath, 0755)
 	if err != nil {
 		http.Error(w, "Error creating folders: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fileName := filepath.Base(r.URL.Path)
+	fileName := filepath.Base(urlPath)
 	filePath := filepath.Join(dirPath, fileName)
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -118,7 +127,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer fileUploaded.Close()
 
 	if _, err := io.Copy(file, fileUploaded); err != nil {
 		http.Error(w, "Error saving the file", http.StatusInternalServerError)
@@ -129,54 +138,60 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
-  filePath := r.URL.Path[1:]
+	parsedURL, err := url.Parse(r.URL.Path)
+	if err != nil {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	cleanPath := path.Clean(parsedURL.Path)
+	urlPath := cleanPath[1:]
 
-  err := os.Remove(filePath)
-  if err != nil {
-      http.Error(w, "Error deleting file: "+err.Error(), http.StatusBadRequest)
-      return
-  }
+	err = os.Remove(urlPath)
+	if err != nil {
+		http.Error(w, "Error deleting file: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
-  dirPath := filepath.Dir(filePath)
-  for dirPath != "." {
-      isEmpty, err := isDirEmpty(dirPath)
-      if err != nil {
-          http.Error(w, "Error checking directory: "+err.Error(), http.StatusInternalServerError)
-          return
-      }
-      if isEmpty {
-          err = os.Remove(dirPath)
-          if err != nil {
-              http.Error(w, "Error deleting directory: "+err.Error(), http.StatusInternalServerError)
-              return
-          }
-      } else {
-          break
-      }
-      dirPath = filepath.Dir(dirPath)
-  }
+	dirPath := filepath.Dir(urlPath)
+	for dirPath != "." {
+		isEmpty, err := isDirEmpty(dirPath)
+		if err != nil {
+			http.Error(w, "Error checking directory: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if isEmpty {
+			err = os.Remove(dirPath)
+			if err != nil {
+				http.Error(w, "Error deleting directory: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			break
+		}
+		dirPath = filepath.Dir(dirPath)
+	}
 
-  fmt.Fprintln(w, "Successfully deleted: " + filePath)
+	fmt.Fprintln(w, "Successfully deleted: "+urlPath)
 }
 
 func isDirEmpty(name string) (bool, error) {
-  f, err := os.Open(name)
-  if err != nil {
-      return false, err
-  }
-  defer f.Close()
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
 
-  _, err = f.Readdirnames(1)
-  if err == io.EOF {
-      return true, nil
-  }
-  return false, err
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
 }
 
 func main() {
 	flag.Parse()
 
-	dirname, err := filepath.Abs(*path)
+	dirname, err := filepath.Abs(*servePath)
 	if err != nil {
 		log.Fatalf("Could not get absolute path to directory: %s: %s", dirname, err.Error())
 	}
