@@ -1,13 +1,10 @@
-name: Build on DockerHub and Deploy to OVH Cloud
+name: Build docker
 
 on:
   pull_request:
     branches:
       - main
-env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-  AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
