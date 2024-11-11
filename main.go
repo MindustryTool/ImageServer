@@ -40,9 +40,9 @@ var Config struct {
 }
 
 func InitFlags() {
-	Config.Path = os.Getenv("PATH")
+	Config.Path = os.Getenv("DATA_PATH")
 	if Config.Path == "" {
-		Config.Path = "."
+		Config.Path = "./data"
 	}
 
 	Config.Port = os.Getenv("PORT")
@@ -110,6 +110,7 @@ func BasicAuth(handler http.HandlerFunc) http.HandlerFunc {
 		if !ok || u != Config.Username || p != Config.Password {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
 			return
 		}
 		handler(w, r)
@@ -220,14 +221,12 @@ func main() {
 	}
 
 	dirPath := filepath.Dir(Config.Path)
-	
-	if Config.Path != "." {
-		if err := os.MkdirAll(dirPath, 0755); err != nil {
-			log.Fatalf("Can not make dir %s %s\n", Config.Path, err)
-		}
+
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
+		log.Fatalf("Can not make dir %s %s\n", Config.Path, err)
 	}
 
-	
+
 	log.Printf("Serving %s on port %s\n", dirname, Config.Port)
 
 
