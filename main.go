@@ -27,6 +27,9 @@ var supported_types = ExtSlice{
 	"jpg",
 	"png",
 	"gif",
+	"webp",
+	"jpeg",
+	"svg",
 }
 
 var Config struct {
