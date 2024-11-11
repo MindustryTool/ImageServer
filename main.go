@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -40,11 +39,25 @@ var Config struct {
 }
 
 func InitFlags() {
-	flag.StringVar(&Config.Path, "PATH", ".", "Path to the folder to serve. Defaults to the current folder")
-	flag.StringVar(&Config.Port, "PORT", "5000", "Port to serve on. Defaults to 5000")
-	flag.StringVar(&Config.Username, "USERNAME", "admin", "Username")
-	flag.StringVar(&Config.Password, "PASSWORD", "password", "Password")
-	flag.Parse()
+	Config.Path = os.Getenv("PATH")
+	if Config.Path == "" {
+		Config.Path = "."
+	}
+
+	Config.Port = os.Getenv("PORT")
+	if Config.Port == "" {
+		Config.Port = "5000" 
+	}
+
+	Config.Username = os.Getenv("USERNAME")
+	if Config.Username == "" {
+		Config.Username = "admin" 
+	}
+
+	Config.Password = os.Getenv("PASSWORD")
+	if Config.Password == "" {
+		Config.Password = "password" 
+	}
 }
 
 func ContainsDotFile(name string) bool {
