@@ -36,6 +36,7 @@ var Config struct {
 	Port     string
 	Username string
 	Password string
+	Domain string
 }
 
 func InitFlags() {
@@ -57,6 +58,11 @@ func InitFlags() {
 	Config.Password = os.Getenv("PASSWORD")
 	if Config.Password == "" {
 		Config.Password = "password" 
+	}
+
+	Config.Password = os.Getenv("DOMAIN")
+	if Config.Password == "" {
+		Config.Password = "https://image.mindustry-tool.app" 
 	}
 }
 
@@ -183,6 +189,8 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "Successfully saved: %s", filePath)
+
+	w.Write([]byte(filepath.Join(Config.Domain, filePath)))
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
