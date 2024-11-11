@@ -1,6 +1,7 @@
 name: Build on DockerHub and Deploy to OVH Cloud
+
 on:
-  push:
+  pull_request:
     branches:
       - main
 env:
