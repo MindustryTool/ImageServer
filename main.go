@@ -91,17 +91,20 @@ func BasicAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func PostImage(w http.ResponseWriter, r *http.Request) {
-	parsedURL, err := url.Parse(r.URL.Path)
+func CleanURL(w http.ResponseWriter, urlPath string) string {
+	parsedURL, err := url.Parse(urlPath)
 	if err != nil {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
+		return ""
 	}
-	cleanPath := path.Clean(parsedURL.Path)
-	urlPath := cleanPath[1:]
+	return path.Clean(parsedURL.Path)
+}
+
+func PostImage(w http.ResponseWriter, r *http.Request) {
+	urlPath := CleanURL(w, r.URL.Path)[1:]
 
 	dirPath := filepath.Dir(urlPath)
-	err = os.MkdirAll(dirPath, 0755)
+	err := os.MkdirAll(dirPath, 0755)
 	if err != nil {
 		http.Error(w, "Error creating folders: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -138,15 +141,9 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
-	parsedURL, err := url.Parse(r.URL.Path)
-	if err != nil {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
-	}
-	cleanPath := path.Clean(parsedURL.Path)
-	urlPath := cleanPath[1:]
+	urlPath := CleanURL(w, r.URL.Path)[1:]
 
-	err = os.Remove(urlPath)
+	err := os.Remove(urlPath)
 	if err != nil {
 		http.Error(w, "Error deleting file: "+err.Error(), http.StatusBadRequest)
 		return
