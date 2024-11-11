@@ -60,9 +60,9 @@ func InitFlags() {
 		Config.Password = "password" 
 	}
 
-	Config.Password = os.Getenv("DOMAIN")
-	if Config.Password == "" {
-		Config.Password = "https://image.mindustry-tool.app" 
+	Config.Domain = os.Getenv("DOMAIN")
+	if Config.Domain == "" {
+		Config.Domain = "https://image.mindustry-tool.app" 
 	}
 }
 
