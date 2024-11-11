@@ -15,7 +15,7 @@ type ExtSlice []string
 
 func (list ExtSlice) Has(a string) bool {
     for _, b := range list {
-        if (strings.HasSuffix(b, a)) {
+        if (strings.HasSuffix(a, b)) {
             return true
         }
     }
@@ -65,6 +65,7 @@ func (fs DotFileHidingFileSystem) Open(name string) (http.File, error) {
 	if ContainsDotFile(name) {
 		return nil, os.ErrPermission
 	}
+
 	file, err := fs.FileSystem.Open(name)
 	if err != nil {
 		return nil, err
@@ -125,6 +126,13 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	if (folder == ""){
 		http.Error(w, "Invalid folder", http.StatusInternalServerError)
+		return
+	}
+
+	
+	if (supported_types.Has(folder)){
+		http.Error(w, "Supported format", http.StatusBadRequest)
+		return
 	}
 	
 	folderPath := filepath.Join(Config.Path, folder)
