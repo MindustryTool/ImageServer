@@ -121,6 +121,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	folder := r.FormValue("folder")
 	id := r.FormValue("id")
+	format := r.FormValue("format")
 
 	if (folder == ""){
 		http.Error(w, "Invalid folder", http.StatusInternalServerError)
@@ -135,7 +136,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(folderPath, id)
+	filePath := filepath.Join(folderPath, id + "." + format)
 
 	file, err := os.Create(filePath)
 	
