@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image/jpeg"
 	"io"
@@ -185,13 +186,21 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	defer fileUploaded.Close()
 
-	if _, err := io.Copy(file, fileUploaded); err != nil {
+	fileBytes, err := io.ReadAll(fileUploaded)
+
+	if err != nil {
+		http.Error(w, "Error reading uploaded file", http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := file.Write(fileBytes); err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
 	}
 
-	if format != "jpeg" {
-		img, err := webp.Decode(fileUploaded)
+	if format == "webp" {
+		reader := bytes.NewReader(fileBytes)
+		img, err := webp.Decode(reader)
 		if err != nil {
 			log.Printf("failed to decode WebP: %v", err)
 			return
@@ -212,6 +221,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, "Error encoding JPEG image", http.StatusInternalServerError)
 			log.Printf("failed to encode JPEG: %v", err)
+			os.Remove(filePath)
 			return
 		}
 	}
