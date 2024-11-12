@@ -191,7 +191,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if format != "jpeg" {
-		img, err := webp.Decode(file)
+		img, err := webp.Decode(fileUploaded)
 		if err != nil {
 			log.Printf("failed to decode WebP: %v", err)
 			return
@@ -204,9 +204,13 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error creating file: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		defer jpegFile.Close()
+
 		err = jpeg.Encode(jpegFile, img, &jpeg.Options{Quality: 100})
 
 		if err != nil {
+			http.Error(w, "Error encoding JPEG image", http.StatusInternalServerError)
 			log.Printf("failed to encode JPEG: %v", err)
 			return
 		}
