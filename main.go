@@ -1,26 +1,29 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"image/jpeg"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/image/webp"
 )
 
 type ExtSlice []string
 
 func (list ExtSlice) Has(a string) bool {
-    for _, b := range list {
-        if (strings.HasSuffix(a, b)) {
-            return true
-        }
-    }
-    return false
+	for _, b := range list {
+		if strings.HasSuffix(a, b) {
+			return true
+		}
+	}
+	return false
 }
-
 
 var supported_types = ExtSlice{
 	"jpg",
@@ -36,7 +39,7 @@ var Config struct {
 	Port     string
 	Username string
 	Password string
-	Domain string
+	Domain   string
 }
 
 func InitFlags() {
@@ -47,22 +50,22 @@ func InitFlags() {
 
 	Config.Port = os.Getenv("PORT")
 	if Config.Port == "" {
-		Config.Port = "5000" 
+		Config.Port = "5000"
 	}
 
 	Config.Username = os.Getenv("SERVER_USERNAME")
 	if Config.Username == "" {
-		Config.Username = "admin" 
+		Config.Username = "admin"
 	}
 
 	Config.Password = os.Getenv("SERVER_PASSWORD")
 	if Config.Password == "" {
-		Config.Password = "password" 
+		Config.Password = "password"
 	}
 
 	Config.Domain = os.Getenv("DOMAIN")
 	if Config.Domain == "" {
-		Config.Domain = "https://image.mindustry-tool.app" 
+		Config.Domain = "https://image.mindustry-tool.app"
 	}
 }
 
@@ -89,9 +92,9 @@ func (fs DotFileHidingFileSystem) Open(name string) (http.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	
-	stat, _ := file.Stat();
-	
+
+	stat, _ := file.Stat()
+
 	if stat.IsDir() {
 		return nil, os.ErrPermission
 	}
@@ -100,14 +103,13 @@ func (fs DotFileHidingFileSystem) Open(name string) (http.File, error) {
 		return nil, os.ErrPermission
 	}
 
-
 	return file, nil
 }
 
 func BasicAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
-		
+
 		if !ok || u != Config.Username || p != Config.Password {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -135,7 +137,7 @@ func HandleRequest(dirname string) http.HandlerFunc {
 	}
 }
 
-func PostImage(w http.ResponseWriter, r *http.Request) {	
+func PostImage(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(100 << 20); err != nil {
 		log.Println(err.Error())
 		http.Error(w, "Error parsing form", http.StatusBadRequest)
@@ -146,37 +148,35 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	format := r.FormValue("format")
 
-	if (folder == ""){
+	if folder == "" {
 		http.Error(w, "Invalid folder", http.StatusInternalServerError)
 		return
 	}
 
-	
-	if (supported_types.Has(folder)){
+	if supported_types.Has(folder) {
 		http.Error(w, "Supported format", http.StatusBadRequest)
 		return
 	}
-	
+
 	folderPath := filepath.Join(Config.Path, folder)
-	
- 	err :=	os.MkdirAll(folderPath, 0755)
+
+	err := os.MkdirAll(folderPath, 0755)
 
 	if err != nil {
 		http.Error(w, "Error creating folder: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	filePath := filepath.Join(folderPath, id + "." + format)
+	filePath := filepath.Join(folderPath, id+"."+format)
 
 	file, err := os.Create(filePath)
-	
+
 	if err != nil {
 		http.Error(w, "Error creating file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	defer file.Close()
-
 
 	fileUploaded, _, err := r.FormFile("file")
 	if err != nil {
@@ -186,9 +186,44 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	defer fileUploaded.Close()
 
-	if _, err := io.Copy(file, fileUploaded); err != nil {
+	fileBytes, err := io.ReadAll(fileUploaded)
+
+	if err != nil {
+		http.Error(w, "Error reading uploaded file", http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := file.Write(fileBytes); err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
+	}
+
+	if format == "webp" {
+		reader := bytes.NewReader(fileBytes)
+		img, err := webp.Decode(reader)
+		if err != nil {
+			log.Printf("failed to decode WebP: %v", err)
+			return
+		}
+
+		jpegFilePath := filepath.Join(folderPath, id+".jpeg")
+		jpegFile, err := os.Create(jpegFilePath)
+
+		if err != nil {
+			http.Error(w, "Error creating file: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		defer jpegFile.Close()
+
+		err = jpeg.Encode(jpegFile, img, &jpeg.Options{Quality: 100})
+
+		if err != nil {
+			http.Error(w, "Error encoding JPEG image", http.StatusInternalServerError)
+			log.Printf("failed to encode JPEG: %v", err)
+			os.Remove(filePath)
+			return
+		}
 	}
 
 	fmt.Fprintf(w, "Successfully saved: %s", filePath)
@@ -228,9 +263,7 @@ func main() {
 		log.Fatalf("Can not make dir %s %s\n", Config.Path, err)
 	}
 
-
 	log.Printf("Serving %s on port %s\n", dirname, Config.Port)
-
 
 	if err := http.ListenAndServe(":"+Config.Port, HandleRequest(dirname)); err != nil {
 		log.Fatalf("Could not start server: %s\n", err)
