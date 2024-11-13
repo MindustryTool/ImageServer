@@ -172,8 +172,8 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 
 	cacheUntil := time.Now().AddDate(60, 0, 0).Format(http.TimeFormat)
 
-	r.Header.Add("Expires", cacheUntil)
-	r.Header.Add("Cache-Control", "public, max-age=31536000")
+	w.Header().Add("Expires", cacheUntil)
+	w.Header().Add("Cache-Control", "public, max-age=31536000")
 
 	switch format {
 	case "jpg", "jpeg":
