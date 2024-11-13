@@ -122,70 +122,67 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filePath := filepath.Join(Config.Path, path)
-
 	file, err := os.Open(filePath)
-
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
+	defer file.Close()
 
-    defer file.Close()
-
-	stats, _ := file.Stat()
-
-	if ContainsDotFile(file.Name()) {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
-	}
-
-	if stats.IsDir() {
+	stats, err := file.Stat()
+	if err != nil || stats.IsDir() || ContainsDotFile(file.Name()) {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
 
 	extension := filepath.Ext(file.Name())[1:]
 
-	switch format {
-	case "png":
-		w.Header().Set("Content-Type", "image/png")
-
-	case "jpg", "jpeg":
-		w.Header().Set("Content-Type", "image/jpeg")
-
-	case "webp":
-		w.Header().Set("Content-Type", "image/webp")
-	}
-
-	if format == "webp" || format == "" || format == extension {
+	// Serve the file directly if no conversion is needed
+	if format == "" || format == extension {
 		http.ServeFile(w, r, filePath)
 		return
 	}
 
-	image, err := ReadImage(file)
+	// Set MIME type based on requested format
+	switch format {
+	case "png":
+		w.Header().Set("Content-Type", "image/png")
+	case "jpg", "jpeg":
+		w.Header().Set("Content-Type", "image/jpeg")
+	case "webp":
+		w.Header().Set("Content-Type", "image/webp")
+	default:
+		http.Error(w, "Unsupported format", http.StatusBadRequest)
+		return
+	}
 
+	image, err := ReadImage(file)
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("Error reading image:", err)
 		http.Error(w, "Error reading image", http.StatusInternalServerError)
 		return
 	}
 
-	cacheUntil := time.Now().AddDate(60, 0, 0).Format(http.TimeFormat)
+	// Set caching headers
+	w.Header().Set("Expires", time.Now().AddDate(60, 0, 0).Format(http.TimeFormat))
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
 
-	w.Header().Add("Expires", cacheUntil)
-	w.Header().Add("Cache-Control", "public, max-age=31536000")
-
+	// Encode and send the image in the requested format
 	switch format {
 	case "jpg", "jpeg":
-		jpeg.Encode(w, image, &jpeg.Options{Quality: 100})
-
+		if err := jpeg.Encode(w, image, &jpeg.Options{Quality: 100}); err != nil {
+			log.Println("Error encoding JPEG:", err)
+			http.Error(w, "Error encoding JPEG", http.StatusInternalServerError)
+		}
 	case "png":
-		png.Encode(w, image)
+		if err := png.Encode(w, image); err != nil {
+			log.Println("Error encoding PNG:", err)
+			http.Error(w, "Error encoding PNG", http.StatusInternalServerError)
+		}
 
 	default:
 		http.Error(w, "Unsupported format", http.StatusBadRequest)
 	}
-
 }
 
 func ReadImage(file *os.File) (image.Image, error) {
