@@ -1,15 +1,18 @@
 package main
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
+	"image"
 	"image/jpeg"
+	"image/png"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"golang.org/x/image/webp"
 )
@@ -79,33 +82,6 @@ func ContainsDotFile(name string) bool {
 	return false
 }
 
-type DotFileHidingFileSystem struct {
-	http.FileSystem
-}
-
-func (fs DotFileHidingFileSystem) Open(name string) (http.File, error) {
-	if ContainsDotFile(name) {
-		return nil, os.ErrPermission
-	}
-
-	file, err := fs.FileSystem.Open(name)
-	if err != nil {
-		return nil, err
-	}
-
-	stat, _ := file.Stat()
-
-	if stat.IsDir() {
-		return nil, os.ErrPermission
-	}
-
-	if !supported_types.Has(stat.Name()) {
-		return nil, os.ErrPermission
-	}
-
-	return file, nil
-}
-
 func BasicAuth(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u, p, ok := r.BasicAuth()
@@ -123,10 +99,9 @@ func BasicAuth(handler http.HandlerFunc) http.HandlerFunc {
 
 func HandleRequest(dirname string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fileSystem := DotFileHidingFileSystem{http.Dir(dirname)}
 		switch r.Method {
 		case http.MethodGet:
-			http.FileServer(fileSystem).ServeHTTP(w, r)
+			ServeImage(w, r)
 		case http.MethodPost:
 			BasicAuth(PostImage).ServeHTTP(w, r)
 		case http.MethodDelete:
@@ -135,6 +110,101 @@ func HandleRequest(dirname string) http.HandlerFunc {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		}
 	}
+}
+
+func ServeImage(w http.ResponseWriter, r *http.Request) {
+	format := r.URL.Query().Get("format")
+	path := r.URL.Path[1:]
+
+	if format != "" && !supported_types.Has(format) {
+		http.Error(w, "Unsupported format", http.StatusBadRequest)
+		return
+	}
+
+	filePath := filepath.Join(Config.Path, path)
+
+	file, err := os.Open(filePath)
+
+	if err != nil {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+    defer file.Close()
+
+	stats, _ := file.Stat()
+
+	if ContainsDotFile(file.Name()) {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	if stats.IsDir() {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	extension := filepath.Ext(file.Name())[1:]
+
+	switch format {
+	case "png":
+		w.Header().Set("Content-Type", "image/png")
+
+	case "jpg", "jpeg":
+		w.Header().Set("Content-Type", "image/jpeg")
+
+	case "webp":
+		w.Header().Set("Content-Type", "image/webp")
+	}
+
+	if format == "webp" || format == "" || format == extension {
+		http.ServeFile(w, r, filePath)
+		return
+	}
+
+	image, err := ReadImage(file)
+
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Error reading image", http.StatusInternalServerError)
+		return
+	}
+
+	cacheUntil := time.Now().AddDate(60, 0, 0).Format(http.TimeFormat)
+
+	r.Header.Add("Expires", cacheUntil)
+	r.Header.Add("Cache-Control", "public, max-age=31536000")
+
+	switch format {
+	case "jpg", "jpeg":
+		jpeg.Encode(w, image, &jpeg.Options{Quality: 100})
+
+	case "png":
+		png.Encode(w, image)
+
+	default:
+		http.Error(w, "Unsupported format", http.StatusBadRequest)
+	}
+
+}
+
+func ReadImage(file *os.File) (image.Image, error) {
+	extension := filepath.Ext(file.Name())[1:]
+
+	switch extension {
+	case "png":
+		return png.Decode(file)
+
+	case "jpg", "jpeg":
+		return jpeg.Decode(file)
+
+	case "webp":
+		return webp.Decode(file)
+
+	default:
+		return nil, errors.New("unsupported format: " + extension)
+	}
+
 }
 
 func PostImage(w http.ResponseWriter, r *http.Request) {
@@ -196,34 +266,6 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 	if _, err := file.Write(fileBytes); err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
-	}
-
-	if format == "webp" {
-		reader := bytes.NewReader(fileBytes)
-		img, err := webp.Decode(reader)
-		if err != nil {
-			log.Printf("failed to decode WebP: %v", err)
-			return
-		}
-
-		jpegFilePath := filepath.Join(folderPath, id+".jpeg")
-		jpegFile, err := os.Create(jpegFilePath)
-
-		if err != nil {
-			http.Error(w, "Error creating file: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		defer jpegFile.Close()
-
-		err = jpeg.Encode(jpegFile, img, &jpeg.Options{Quality: 100})
-
-		if err != nil {
-			http.Error(w, "Error encoding JPEG image", http.StatusInternalServerError)
-			log.Printf("failed to encode JPEG: %v", err)
-			os.Remove(filePath)
-			return
-		}
 	}
 
 	fmt.Fprintf(w, "Successfully saved: %s", filePath)
