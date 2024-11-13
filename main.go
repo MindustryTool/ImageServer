@@ -1,17 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"image/jpeg"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"golang.org/x/image/webp"
 )
 
 type ExtSlice []string
@@ -196,34 +192,6 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 	if _, err := file.Write(fileBytes); err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
-	}
-
-	if format == "webp" {
-		reader := bytes.NewReader(fileBytes)
-		img, err := webp.Decode(reader)
-		if err != nil {
-			log.Printf("failed to decode WebP: %v", err)
-			return
-		}
-
-		jpegFilePath := filepath.Join(folderPath, id+".jpeg")
-		jpegFile, err := os.Create(jpegFilePath)
-
-		if err != nil {
-			http.Error(w, "Error creating file: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		defer jpegFile.Close()
-
-		err = jpeg.Encode(jpegFile, img, &jpeg.Options{Quality: 100})
-
-		if err != nil {
-			http.Error(w, "Error encoding JPEG image", http.StatusInternalServerError)
-			log.Printf("failed to encode JPEG: %v", err)
-			os.Remove(filePath)
-			return
-		}
 	}
 
 	fmt.Fprintf(w, "Successfully saved: %s", filePath)
