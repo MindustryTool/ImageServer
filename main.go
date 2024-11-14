@@ -137,6 +137,10 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 
 	extension := filepath.Ext(file.Name())[1:]
 
+	// Set caching headers
+	w.Header().Add("Expires", time.Now().AddDate(60, 0, 0).Format(http.TimeFormat))
+	w.Header().Add("Cache-Control", "public, max-age=31536000")
+
 	// Serve the file directly if no conversion is needed
 	if format == "" || format == extension {
 		http.ServeFile(w, r, filePath)
@@ -146,11 +150,11 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 	// Set MIME type based on requested format
 	switch format {
 	case "png":
-		w.Header().Set("Content-Type", "image/png")
+		w.Header().Add("Content-Type", "image/png")
 	case "jpg", "jpeg":
-		w.Header().Set("Content-Type", "image/jpeg")
+		w.Header().Add("Content-Type", "image/jpeg")
 	case "webp":
-		w.Header().Set("Content-Type", "image/webp")
+		w.Header().Add("Content-Type", "image/webp")
 	default:
 		http.Error(w, "Unsupported format", http.StatusBadRequest)
 		return
@@ -162,10 +166,6 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error reading image", http.StatusInternalServerError)
 		return
 	}
-
-	// Set caching headers
-	w.Header().Set("Expires", time.Now().AddDate(60, 0, 0).Format(http.TimeFormat))
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
 
 	// Encode and send the image in the requested format
 	switch format {
