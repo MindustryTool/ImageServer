@@ -9,7 +9,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -264,8 +266,18 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
 	}
+    
+	baseURL, err := url.Parse(Config.Domain)
+	if err != nil {
+		http.Error(w, "Invalid domain configuration", http.StatusInternalServerError)
+		return
+	}
 
-	w.Write([]byte(filepath.Join(Config.Domain, folder, id+"."+format)))
+	baseURL.Path = path.Join(baseURL.Path, folder, id+"."+format)
+	if _, err := w.Write([]byte(baseURL.String())); err != nil {
+		http.Error(w, "Error writing response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
