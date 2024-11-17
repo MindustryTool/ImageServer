@@ -265,9 +265,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Successfully saved: %s", filePath)
-
-	w.Write([]byte(filepath.Join(Config.Domain, filePath)))
+	w.Write([]byte(filepath.Join(Config.Domain, folder, id+"."+format)))
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
