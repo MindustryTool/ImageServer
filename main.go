@@ -221,11 +221,6 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if supported_types.Has(folder) {
-		http.Error(w, "Supported format", http.StatusBadRequest)
-		return
-	}
-
 	folderPath := filepath.Join(Config.Path, folder)
 
 	err := os.MkdirAll(folderPath, 0755)
