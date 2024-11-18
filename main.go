@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"image"
@@ -241,7 +242,9 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	fileBytes, err := io.ReadAll(fileUploaded)
 
-	contentType := http.DetectContentType(fileBytes)
+	buffer := bytes.Clone(fileBytes[0:512])
+
+	contentType := http.DetectContentType(buffer)
 
 	format := strings.Split(contentType, "/")[1]
 
