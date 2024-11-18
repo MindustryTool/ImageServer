@@ -60,12 +60,12 @@ func InitFlags() {
 
 	Config.Username = os.Getenv("SERVER_USERNAME")
 	if Config.Username == "" {
-		Config.Username = "admin"
+		Config.Username = "user"
 	}
 
 	Config.Password = os.Getenv("SERVER_PASSWORD")
 	if Config.Password == "" {
-		Config.Password = "password"
+		Config.Password = "test123"
 	}
 
 	Config.Domain = os.Getenv("DOMAIN")
@@ -215,7 +215,6 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	folder := r.FormValue("folder")
 	id := r.FormValue("id")
-	format := r.FormValue("format")
 
 	if folder == "" {
 		http.Error(w, "Invalid folder", http.StatusInternalServerError)
@@ -236,6 +235,30 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fileUploaded, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		return
+	}
+
+	defer fileUploaded.Close()
+
+	fileBytes, err := io.ReadAll(fileUploaded)
+
+	contentType := http.DetectContentType(fileBytes)
+
+	format := strings.Split(contentType, "/")[1]
+
+	if format != "" && !supported_types.Has(format) {
+		http.Error(w, "Unsupported format", http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		http.Error(w, "Error reading uploaded file", http.StatusInternalServerError)
+		return
+	}
+
 	filePath := filepath.Join(folderPath, id+"."+format)
 
 	file, err := os.Create(filePath)
@@ -247,26 +270,11 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	defer file.Close()
 
-	fileUploaded, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "Error retrieving file", http.StatusBadRequest)
-		return
-	}
-
-	defer fileUploaded.Close()
-
-	fileBytes, err := io.ReadAll(fileUploaded)
-
-	if err != nil {
-		http.Error(w, "Error reading uploaded file", http.StatusInternalServerError)
-		return
-	}
-
 	if _, err := file.Write(fileBytes); err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
 	}
-    
+
 	baseURL, err := url.Parse(Config.Domain)
 	if err != nil {
 		http.Error(w, "Invalid domain configuration", http.StatusInternalServerError)
