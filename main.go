@@ -237,7 +237,8 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	fileUploaded, _, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		log.Println("Error retrieving file: " + err.Error())
+		http.Error(w, "Error retrieving file: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
