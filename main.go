@@ -71,7 +71,7 @@ func InitFlags() {
 
 	Config.Domain = os.Getenv("DOMAIN")
 	if Config.Domain == "" {
-		Config.Domain = "https://image.mindustry-tool.app"
+		Config.Domain = "https://image.mindustry-tool.com"
 	}
 }
 
