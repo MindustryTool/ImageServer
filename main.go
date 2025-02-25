@@ -141,7 +141,6 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 	extension := filepath.Ext(file.Name())[1:]
 
 	// Set caching headers
-	w.Header().Add("Expires", time.Now().AddDate(60, 0, 0).Format(http.TimeFormat))
 	w.Header().Add("Cache-Control", "public, max-age=31536000")
 
 	// Serve the file directly if no conversion is needed
