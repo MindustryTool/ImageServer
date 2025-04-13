@@ -145,10 +145,22 @@ func ListDirectory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Apply pagination
-	start := 0
-	end := len(allFiles)
-	if end > pageSize {
-		end = pageSize
+	page := 0
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p  // Convert to 0-based index
+		}
+	}
+
+	start := page * pageSize
+	if start >= len(allFiles) {
+		json.NewEncoder(w).Encode([])
+		return;
+	}
+
+	end := start + pageSize
+	if end > len(allFiles) {
+		end = len(allFiles)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
