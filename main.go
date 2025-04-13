@@ -154,8 +154,9 @@ func ListDirectory(w http.ResponseWriter, r *http.Request) {
 
 	start := page * pageSize
 	if start >= len(allFiles) {
-		json.NewEncoder(w).Encode([]FileInfo{})
-		return
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode([]FileInfo{})
+        return
 	}
 
 	end := start + pageSize
