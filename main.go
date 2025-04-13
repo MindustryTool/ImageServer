@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -14,7 +15,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/image/webp"
 )
@@ -99,12 +102,97 @@ func BasicAuth(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+type FileInfo struct {
+	Name     string    `json:"name"`
+	Path     string    `json:"path"`
+	Size     int64     `json:"size"`
+	ModTime  time.Time `json:"modTime"`
+	IsDir    bool      `json:"isDir"`
+}
+
+func ListDirectory(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join(Config.Path, r.URL.Path[1:])
+
+	files, err := os.ReadDir(path)
+	if err != nil {
+		http.Error(w, "Directory not found", http.StatusNotFound)
+		return
+	}
+
+	var allFiles []FileInfo
+	for _, file := range files {
+		info, err := file.Info()
+		if err != nil {
+			continue
+		}
+		if !ContainsDotFile(info.Name()) {
+			allFiles = append(allFiles, FileInfo{
+				Name:    info.Name(),
+				Path:    filepath.Join(r.URL.Path, info.Name()),
+				Size:    info.Size(),
+				ModTime: info.ModTime(),
+				IsDir:   info.IsDir(),
+			})
+		}
+	}
+
+	// Get page size from query parameter
+	pageSize := 10 // Default page size
+	if size := r.URL.Query().Get("size"); size != "" {
+		if s, err := strconv.Atoi(size); err == nil && s > 0 {
+			pageSize = s
+		}
+	}
+
+	// Apply pagination
+	start := 0
+	end := len(allFiles)
+	if end > pageSize {
+		end = pageSize
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(allFiles[start:end])
+}
+
+func CreateDirectory(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join(Config.Path, r.URL.Path[1:])
+
+	if err := os.MkdirAll(path, 0755); err != nil {
+		http.Error(w, "Failed to create directory", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
 func HandleRequest(dirname string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Add CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
+			// Check if request is for directory listing
+			if r.URL.Query().Get("list") == "true" {
+				BasicAuth(ListDirectory).ServeHTTP(w, r)
+				return
+			}
 			ServeImage(w, r)
 		case http.MethodPost:
+			// Check if request is for directory creation
+			if r.URL.Query().Get("mkdir") == "true" {
+				BasicAuth(CreateDirectory).ServeHTTP(w, r)
+				return
+			}
 			BasicAuth(PostImage).ServeHTTP(w, r)
 		case http.MethodDelete:
 			BasicAuth(DeleteImage).ServeHTTP(w, r)
@@ -286,12 +374,29 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteImage(w http.ResponseWriter, r *http.Request) {
-	filePath := r.URL.Path[1:]
-	if err := os.Remove(filePath); err != nil {
-		http.Error(w, "Error deleting file: "+err.Error(), http.StatusBadRequest)
+	path := filepath.Join(Config.Path, r.URL.Path[1:])
+
+	// Get file info to check if it's a directory
+	info, err := os.Stat(path)
+	if err != nil {
+		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
-	fmt.Fprintf(w, "Successfully deleted: %s", filePath)
+
+	// Use RemoveAll for directories and Remove for files
+	if info.IsDir() {
+		if err := os.RemoveAll(path); err != nil {
+			http.Error(w, "Error deleting directory: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		if err := os.Remove(path); err != nil {
+			http.Error(w, "Error deleting file: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	fmt.Fprintf(w, "Successfully deleted: %s", r.URL.Path[1:])
 }
 
 func IsDirEmpty(name string) (bool, error) {
