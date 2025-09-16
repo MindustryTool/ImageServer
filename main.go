@@ -71,7 +71,7 @@ func InitFlags() {
 		Config.Password = "test123"
 	}
 
-	Config.Domain = os.Getenv("DOMAIN")
+	Config.Domain = os.Getenv("IMAGE_SERVER_DOMAIN")
 	if Config.Domain == "" {
 		Config.Domain = "https://image.mindustry-tool.app"
 	}
