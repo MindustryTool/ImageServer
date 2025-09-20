@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/image/draw"
 	"golang.org/x/image/webp"
 )
 
@@ -217,6 +218,7 @@ func HandleRequest(dirname string) http.HandlerFunc {
 
 func ServeImage(w http.ResponseWriter, r *http.Request) {
 	format := r.URL.Query().Get("format")
+	variant := r.URL.Query().Get("variant")
 	path := r.URL.Path[1:]
 
 	if format != "" && !supported_types.Has(format) {
@@ -226,6 +228,7 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 
 	filePath := filepath.Join(Config.Path, path)
 	file, err := os.Open(filePath)
+
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
@@ -263,6 +266,11 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	image, err := ReadImage(file)
+
+	if variant != "" {
+		image = ApplyVariant(filePath, image, variant)
+	}
+
 	if err != nil {
 		log.Println("Error reading image:", err)
 		http.Error(w, "Error reading image", http.StatusInternalServerError)
@@ -285,6 +293,64 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Unsupported format", http.StatusBadRequest)
 	}
+}
+
+func ApplyVariant(filePath string, image image.Image, variant string) image.Image {
+	switch variant {
+	case "preview":
+		return Preview(filePath, image)
+	default:
+		return image
+	}
+}
+
+// Find image with .preview + orginal file extenstion, if not then scale original and write to disk
+func Preview(filePath string, image image.Image) image.Image {
+	previewPath := filePath + ".preview" + filepath.Ext(filePath)
+
+	if _, err := os.Stat(previewPath); err == nil {
+		// Preview exists, read and return
+		file, err := os.Open(previewPath)
+		if err != nil {
+			log.Println("Error opening preview file:", err)
+			return image
+		}
+
+		defer file.Close()
+		
+		previewImage, err := ReadImage(file)
+		
+		if err != nil {
+			log.Println("Error reading preview image:", err)
+			return image
+		}
+
+		return previewImage
+	}
+
+	// Preview does not exist, scale and write to disk
+	previewImage := Scale(image, 256, 256)
+
+	file, err := os.Create(previewPath)
+	if err != nil {
+		log.Println("Error creating preview file:", err)
+		return image
+	}
+	defer file.Close()
+
+	if err := png.Encode(file, previewImage); err != nil {
+		log.Println("Error encoding preview image:", err)
+		return image
+	}
+
+
+	return image
+}
+
+func Scale(img image.Image, width, height int) image.Image {
+	scaledImage := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.NearestNeighbor.Scale(scaledImage, scaledImage.Bounds(), img, img.Bounds(), draw.Over, nil)
+	return scaledImage
 }
 
 func ReadImage(file *os.File) (image.Image, error) {
@@ -368,7 +434,7 @@ func PostImage(w http.ResponseWriter, r *http.Request) {
 
 	defer file.Close()
 
-	if _, err := file.Write(fileBytes); err != nil {
+	if _, err = file.Write(fileBytes); err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
 	}
