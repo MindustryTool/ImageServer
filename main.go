@@ -218,7 +218,7 @@ func HandleRequest(dirname string) http.HandlerFunc {
 
 func ServeImage(w http.ResponseWriter, r *http.Request) {
 	format := r.URL.Query().Get("format")
-	variant := r.URL.Query().Get("variant")
+	// variant := r.URL.Query().Get("variant")
 	path := r.URL.Path[1:]
 
 	if format != "" && !supported_types.Has(format) {
@@ -267,9 +267,9 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 
 	image, err := ReadImage(file)
 
-	if variant != "" {
-		image = ApplyVariant(filePath, image, variant)
-	}
+	// if variant != "" {
+	// 	image = ApplyVariant(filePath, image, variant)
+	// }
 
 	if err != nil {
 		log.Println("Error reading image:", err)
