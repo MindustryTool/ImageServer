@@ -349,7 +349,7 @@ func Preview(filePath string, image image.Image) image.Image {
 
 func Scale(img image.Image, width, height int) image.Image {
 	scaledImage := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.NearestNeighbor.Scale(scaledImage, scaledImage.Bounds(), img, img.Bounds(), draw.Over, nil)
+	draw.BiLinear.Scale(scaledImage, scaledImage.Bounds(), img, img.Bounds(), draw.Over, nil)
 	return scaledImage
 }
 
