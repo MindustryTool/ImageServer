@@ -87,6 +87,11 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		return
 	}
 
+	if models.ConverableTypes.Has(format) {
+		c.File(filePath)
+		return
+	}
+
 	img, err := utils.ReadImage(filePathNoExt, variant)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading image"})

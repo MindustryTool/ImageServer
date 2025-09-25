@@ -32,3 +32,9 @@ var SupportedTypes = ExtSlice{
 	"jpeg",
 	"svg",
 }
+
+var ConverableTypes = ExtSlice{
+	"jpg",
+	"png",
+	"jpeg",
+}

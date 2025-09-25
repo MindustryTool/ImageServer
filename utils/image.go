@@ -138,17 +138,17 @@ func FixAllFiles(cfg *config.Config) {
 				return nil
 		}
 
-			filePathNoExt := path[:len(path)-len(filepath.Ext(path))]
+		filePathNoExt := path[:len(path)-len(filepath.Ext(path))]
 
-			pngFile, err := os.Create(filePathNoExt)
-			if err != nil {
-				return err
-			}
-			defer pngFile.Close()
-			if err := png.Encode(pngFile, image); err != nil {
-				return err
-			}
- 
+		pngFile, err := os.Create(filePathNoExt)
+		if err != nil {
+			return err
+		}
+		defer pngFile.Close()
+		if err := png.Encode(pngFile, image); err != nil {
+			return err
+		}
+
 		return nil
 	})
 

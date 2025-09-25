@@ -108,6 +108,7 @@ func (h *APIHandler) CreateDirectory(c *gin.Context) {
 func (h *APIHandler) UploadImage(c *gin.Context) {
 	folder := c.PostForm("folder")
 	id := c.PostForm("id")
+	format := c.PostForm("format")
 
 	if folder == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid folder"})
@@ -141,13 +142,40 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 	}
 
 	buffer := bytes.Clone(fileBytes[0:512])
+
+	if (models.ConverableTypes.Has(format)) {
+		filePath := filepath.Join(folderPath, id)
+		outputFile, error := os.Create(filePath)
+		if error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating file: " + error.Error()})
+			return
+		}
+		defer outputFile.Close()
+	
+		if _, err = outputFile.Write(fileBytes); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving file"})
+			return
+		}
+		baseURL, error := url.Parse(h.config.Domain)
+		if error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid domain configuration"})
+			return
+		}
+	
+		baseURL.Path = path.Join(baseURL.Path, folder, id+"."+format)
+		c.JSON(http.StatusCreated, gin.H{"url": baseURL.String()})
+		
+		return
+	}
+
 	contentType := http.DetectContentType(buffer)
-	format := strings.Split(contentType, "/")[1]
+	format = strings.Split(contentType, "/")[1]
 
 	if format != "" && !models.SupportedTypes.Has(format) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format"})
 		return
 	}
+
 
 	var finalBytes []byte
 
@@ -189,6 +217,7 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 	baseURL.Path = path.Join(baseURL.Path, folder, id+"."+format)
 	c.JSON(http.StatusCreated, gin.H{"url": baseURL.String()})
 }
+
 
 // DeleteFile handles DELETE /api/v1/files/*path
 func (h *APIHandler) DeleteFile(c *gin.Context) {
