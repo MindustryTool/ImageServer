@@ -16,7 +16,7 @@ func Load() *Config {
 		Port:     getEnv("PORT", "5000"),
 		Username: getEnv("SERVER_USERNAME", "user"),
 		Password: getEnv("SERVER_PASSWORD", "test123"),
-		Domain:   getEnv("IMAGE_SERVER_DOMAIN", "https://image.mindustry-tool.app"),
+		Domain:   getEnv("IMAGE_SERVER_DOMAIN", "http://localhost:5000"),
 	}
 	return cfg
 }

@@ -3,14 +3,12 @@ package utils
 import (
 	"errors"
 	"image"
-	"image/jpeg"
 	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"golang.org/x/image/draw"
-	"golang.org/x/image/webp"
 )
 
 func ContainsDotFile(name string) bool {
@@ -23,66 +21,73 @@ func ContainsDotFile(name string) bool {
 	return false
 }
 
-func ReadImage(file *os.File) (image.Image, error) {
-	extension := filepath.Ext(file.Name())[1:]
-
-	switch extension {
-	case "png":
-		return png.Decode(file)
-	case "jpg", "jpeg":
-		return jpeg.Decode(file)
-	case "webp":
-		return webp.Decode(file)
-	default:
-		return nil, errors.New("unsupported format: " + extension)
-	}
-}
-
-func Scale(img image.Image, width, height int) image.Image {
-	scaledImage := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.BiLinear.Scale(scaledImage, scaledImage.Bounds(), img, img.Bounds(), draw.Over, nil)
-	return scaledImage
-}
-
-func ApplyVariant(filePath string, img image.Image, variant string) image.Image {
-	switch variant {
-	case "preview":
-		return Preview(filePath, img)
-	default:
-		return img
-	}
-}
-
-func Preview(filePath string, img image.Image) image.Image {
-	previewPath := filePath + ".preview" + filepath.Ext(filePath)
-
-	if _, err := os.Stat(previewPath); err == nil {
-		// Preview exists, read and return
-		file, err := os.Open(previewPath)
-		if err != nil {
-			return img
-		}
-		defer file.Close()
-
-		previewImage, err := ReadImage(file)
-		if err != nil {
-			return img
-		}
-		return previewImage
-	}
-
-	// Preview does not exist, scale and write to disk
-	previewImage := Scale(img, 256, 256)
-
-	file, err := os.Create(previewPath)
+func ReadImage(filePath string, variant string) (image.Image, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
-		return img
+		return nil, errors.New("file not found")
 	}
 	defer file.Close()
 
-	if err := png.Encode(file, previewImage); err != nil {
+	stats, err := file.Stat()
+	if err != nil || stats.IsDir() || ContainsDotFile(file.Name()) {
+		return nil, errors.New("file not found")
+	}
+
+	img, err := png.Decode(file)
+	if err != nil {
+		return nil, errors.New("error decoding image: " + err.Error())
+	}
+
+	if variant != "" {
+		variantPath := filePath + "." + variant + filepath.Ext(filePath)
+		img = ApplyVariant(img, variant)
+
+		// Write image to variant path
+		variantFile, err := os.Create(variantPath)
+		if err != nil {
+			return nil, errors.New("error creating variant file: " + err.Error())
+		}
+		defer variantFile.Close()
+		if err := png.Encode(variantFile, img); err != nil {
+			return nil, errors.New("error encoding variant image: " + err.Error())
+		}
+	}
+
+	return img, nil
+}
+
+func Scale(img image.Image, size int) image.Image {
+	bounds := img.Bounds()
+	srcW := bounds.Dx()
+	srcH := bounds.Dy()
+
+	var newW, newH int
+	if srcW > srcH {
+		newW = size
+		newH = int(float64(srcH) * float64(size) / float64(srcW))
+	} else {
+		newH = size
+		newW = int(float64(srcW) * float64(size) / float64(srcH))
+	}
+
+	dst := image.NewRGBA(image.Rect(0, 0, newW, newH))
+	draw.BiLinear.Scale(dst, dst.Bounds(), img, bounds, draw.Over, nil)
+
+	return dst
+}
+
+func ApplyVariant(img image.Image, variant string) image.Image {
+	switch variant {
+	case "preview":
+		return Preview(img)
+	default:
 		return img
 	}
+}
+
+func Preview(img image.Image) image.Image {
+	// Preview does not exist, scale and write to disk
+	previewImage := Scale(img, 256)
 
 	return previewImage
 }
