@@ -155,13 +155,13 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 		finalBytes = fileBytes
 	} else {
 		// Convert to PNG
-		img, _, err := image.Decode(bytes.NewReader(fileBytes))
-		if err != nil {
+		img, _, err2 := image.Decode(bytes.NewReader(fileBytes))
+		if err2 != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding image"})
 			return
 		}
 		var buf bytes.Buffer
-		if err := png.Encode(&buf, img); err != nil {
+		if err = png.Encode(&buf, img); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error encoding PNG"})
 			return
 		}
