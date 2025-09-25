@@ -91,7 +91,7 @@ func ApplyVariant(img image.Image, variant string) image.Image {
 
 func Preview(img image.Image) image.Image {
 	// Preview does not exist, scale and write to disk
-	previewImage := Scale(img, 256)
+	previewImage := Scale(img, 256 + 128)
 
 	return previewImage
 }
