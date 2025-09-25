@@ -82,8 +82,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 
 
 	// Serve the file directly if no conversion is needed
-	if format == "" || format == "png" {
-		println("Serve image: " + filePathNoExt + ".png")
+	if (format == "" || format == "png") && variant == "" {
 		c.File(filePathNoExt)
 		return
 	}

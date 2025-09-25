@@ -1,14 +1,18 @@
 package utils
 
 import (
+	"ImageServer/config"
 	"errors"
 	"image"
+	"image/jpeg"
 	"image/png"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"golang.org/x/image/draw"
+	"golang.org/x/image/webp"
 )
 
 func ContainsDotFile(name string) bool {
@@ -90,4 +94,65 @@ func Preview(img image.Image) image.Image {
 	previewImage := Scale(img, 256)
 
 	return previewImage
+}
+
+func FixAllFiles(cfg *config.Config) {
+	baseDir, err := filepath.Abs(cfg.Path)
+	if err != nil {
+		log.Fatalf("Error getting absolute path: %v", err)
+	}
+
+	err = filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		// Read image file
+		ext := filepath.Ext(path)
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		var image image.Image
+		
+		switch ext {
+			case ".png":
+				image, err = png.Decode(file)
+				if err != nil {
+					return err
+				}
+			case ".jpg", ".jpeg":
+				image, err = jpeg.Decode(file)
+				if err != nil {
+					return err
+				}
+			case "webp":
+				image, err = webp.Decode(file)
+				if err != nil {
+					return err
+				}
+			default:
+				return nil
+		}
+
+			filePathNoExt := path[:len(path)-len(filepath.Ext(path))]
+
+			pngFile, err := os.Create(filePathNoExt)
+			if err != nil {
+				return err
+			}
+			defer pngFile.Close()
+			if err := png.Encode(pngFile, image); err != nil {
+				return err
+			}
+ 
+		return nil
+	})
+
+	if err != nil {
+		log.Fatalf("Error walking path: %v", err)
+	}
 }
