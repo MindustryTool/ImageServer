@@ -8,7 +8,6 @@ import (
 	"ImageServer/config"
 	"ImageServer/handlers"
 	"ImageServer/middleware"
-	"ImageServer/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,8 +26,6 @@ func main() {
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		log.Fatalf("Cannot make dir %s: %s\n", cfg.Path, err)
 	}
-
-	utils.FixAllFiles(cfg)
 
 	// Create Gin router
 	r := gin.Default()
