@@ -143,7 +143,7 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 
 	buffer := bytes.Clone(fileBytes[0:512])
 
-	if (models.ConverableTypes.Has(format)) {
+	if !models.ConverableTypes.Has(format) {
 		filePath := filepath.Join(folderPath, id)
 		outputFile, error := os.Create(filePath)
 		if error != nil {

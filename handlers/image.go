@@ -87,7 +87,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		return
 	}
 
-	if models.ConverableTypes.Has(format) {
+	if !models.ConverableTypes.Has(format) {
 		c.File(filePath)
 		return
 	}
