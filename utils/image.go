@@ -75,7 +75,7 @@ func Scale(img image.Image, size int) image.Image {
 	}
 
 	dst := image.NewRGBA(image.Rect(0, 0, newW, newH))
-	draw.BiLinear.Scale(dst, dst.Bounds(), img, bounds, draw.Over, nil)
+	draw.CatmullRom.Scale(dst, dst.Bounds(), img, bounds, draw.Over, nil)
 
 	return dst
 }
@@ -91,7 +91,7 @@ func ApplyVariant(img image.Image, variant string) image.Image {
 
 func Preview(img image.Image) image.Image {
 	// Preview does not exist, scale and write to disk
-	previewImage := Scale(img, 256 + 128)
+	previewImage := Scale(img, 256 + 128 )
 
 	return previewImage
 }
