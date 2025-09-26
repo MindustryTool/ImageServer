@@ -144,7 +144,7 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 	buffer := bytes.Clone(fileBytes[0:512])
 
 	if !models.ConverableTypes.Has(format) {
-		filePath := filepath.Join(folderPath, id)
+		filePath := filepath.Join(folderPath, id + "." + format)
 		outputFile, error := os.Create(filePath)
 		if error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating file: " + error.Error()})
