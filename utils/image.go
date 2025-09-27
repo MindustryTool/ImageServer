@@ -28,8 +28,21 @@ func ContainsDotFile(name string) bool {
 func ReadImage(filePath string, variant string) (image.Image, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, errors.New("file not found")
+		file, err = os.Open(filePath + ".png")
+		if err != nil {
+			file, err = os.Open(filePath + ".jpg")
+			if err != nil {
+				file, err = os.Open(filePath + ".webp")
+				if err != nil {
+					file, err = os.Open(filePath + ".jpeg")
+					if err != nil {
+						return nil, errors.New("file not found")
+					}
+				}
+			}
+		}
 	}
+	
 	defer file.Close()
 
 	stats, err := file.Stat()
