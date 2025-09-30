@@ -85,11 +85,6 @@ func loadImage(path string) (image.Image, error) {
 	}
 	defer file.Close()
 
-	stats, err := file.Stat()
-	if err != nil || stats.IsDir() || ContainsDotFile(file.Name()) {
-		return nil, errors.New("file not found")
-	}
-
 	img, _, err := image.Decode(file)
 	if err != nil {
 		return nil, err
