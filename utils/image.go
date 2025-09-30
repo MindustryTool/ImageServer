@@ -2,7 +2,6 @@ package utils
 
 import (
 	"ImageServer/config"
-	"errors"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -36,7 +35,7 @@ func FindImage(filePath string) (*os.File, error) {
 				if err != nil {
 					file, err = os.Open(filePath + ".jpeg")
 					if err != nil {
-						return nil, errors.New("file not found")
+						return nil, nil
 					}
 				}
 			}
@@ -64,6 +63,11 @@ func ReadImage(filePath, variant string) (image.Image, error) {
 		return nil, err
 	}
 
+
+	if img == nil {
+		return nil, nil
+	}
+
 	// 3. Apply variant and cache if requested
 	if variant != "" {
 		img = ApplyVariant(img, variant)
@@ -84,6 +88,10 @@ func loadImage(path string) (image.Image, error) {
 		return nil, err
 	}
 	defer file.Close()
+
+	if file == nil {
+		return nil, nil
+	}
 
 	img, _, err := image.Decode(file)
 	if err != nil {

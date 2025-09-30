@@ -94,9 +94,15 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 	}
 
 	img, err := utils.ReadImage(filePathNoExt, variant)
+	
 	if err != nil {
 		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading image"})
+		return
+	}
+
+	if img == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
 		return
 	}
 
