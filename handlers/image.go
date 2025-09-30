@@ -44,6 +44,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 	// Get absolute path of the configured directory
 	baseDir, err := filepath.Abs(h.config.Path)
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Server configuration error"})
 		return
 	}
@@ -94,6 +95,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 
 	img, err := utils.ReadImage(filePathNoExt, variant)
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading image"})
 		return
 	}
@@ -105,11 +107,13 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 	case "jpg", "jpeg":
 		c.Header("Content-Type", "image/jpeg")
 		if err := jpeg.Encode(c.Writer, img, &jpeg.Options{Quality: 100}); err != nil {
+			println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error encoding JPEG"})
 		}
 	case "png":
 		c.Header("Content-Type", "image/png")
 		if err := png.Encode(c.Writer, img); err != nil {
+			println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error encoding PNG"})
 		}
 	default:
