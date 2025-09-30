@@ -25,7 +25,7 @@ func ContainsDotFile(name string) bool {
 	return false
 }
 
-func ReadImage(filePath string, variant string) (image.Image, error) {
+func FindImage(filePath string) (*os.File, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		file, err = os.Open(filePath + ".png")
@@ -42,7 +42,47 @@ func ReadImage(filePath string, variant string) (image.Image, error) {
 			}
 		}
 	}
-	
+
+	return file, nil
+}
+
+// ReadImage loads an image from disk and applies a variant if specified.
+// If the variant already exists, it is returned directly (cached).
+func ReadImage(filePath, variant string) (image.Image, error) {
+	// 1. Try to load cached variant if requested
+	if variant != "" {
+		variantPath := filePath + "." + variant + filepath.Ext(filePath)
+		if img, err := loadImage(variantPath); err == nil {
+			// ✅ Cached variant found
+			return img, nil
+		}
+	}
+
+	// 2. Load original image (with FindImage fallback: .png, .jpg, .webp, .jpeg)
+	img, err := loadImage(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Apply variant and cache if requested
+	if variant != "" {
+		img = ApplyVariant(img, variant)
+
+		variantPath := filePath + "." + variant + ".png"
+		if err := saveAsPNG(variantPath, img); err != nil {
+			return nil, err
+		}
+	}
+
+	return img, nil
+}
+
+// loadImage uses FindImage to open a file and decode it.
+func loadImage(path string) (image.Image, error) {
+	file, err := FindImage(path)
+	if err != nil {
+		return nil, err
+	}
 	defer file.Close()
 
 	stats, err := file.Stat()
@@ -50,27 +90,22 @@ func ReadImage(filePath string, variant string) (image.Image, error) {
 		return nil, errors.New("file not found")
 	}
 
-	img, err := png.Decode(file)
+	img, _, err := image.Decode(file)
 	if err != nil {
-		return nil, errors.New("error decoding image: " + err.Error())
+		return nil, err
 	}
-
-	if variant != "" {
-		variantPath := filePath + "." + variant + filepath.Ext(filePath)
-		img = ApplyVariant(img, variant)
-
-		// Write image to variant path
-		variantFile, err := os.Create(variantPath)
-		if err != nil {
-			return nil, errors.New("error creating variant file: " + err.Error())
-		}
-		defer variantFile.Close()
-		if err := png.Encode(variantFile, img); err != nil {
-			return nil, errors.New("error encoding variant image: " + err.Error())
-		}
-	}
-
 	return img, nil
+}
+
+// saveAsPNG saves an image as PNG.
+func saveAsPNG(path string, img image.Image) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return png.Encode(f, img)
 }
 
 func Scale(img image.Image, size int) image.Image {
@@ -104,7 +139,7 @@ func ApplyVariant(img image.Image, variant string) image.Image {
 
 func Preview(img image.Image) image.Image {
 	// Preview does not exist, scale and write to disk
-	previewImage := Scale(img, 256 + 128 )
+	previewImage := Scale(img, 256)
 
 	return previewImage
 }
