@@ -97,6 +97,7 @@ func (h *APIHandler) CreateDirectory(c *gin.Context) {
 	fullPath := filepath.Join(h.config.Path, dirPath)
 
 	if err := os.MkdirAll(fullPath, 0755); err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory"})
 		return
 	}
@@ -118,18 +119,21 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 	folderPath := filepath.Join(h.config.Path, folder)
 	err := os.MkdirAll(folderPath, 0755)
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating folder: " + err.Error()})
 		return
 	}
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Error retrieving file: " + err.Error()})
 		return
 	}
 
 	file, err := fileHeader.Open()
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error opening file"})
 		return
 	}
@@ -137,6 +141,7 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading uploaded file"})
 		return
 	}
@@ -147,17 +152,20 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 		filePath := filepath.Join(folderPath, id + "." + format)
 		outputFile, error := os.Create(filePath)
 		if error != nil {
+			println(error.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating file: " + error.Error()})
 			return
 		}
 		defer outputFile.Close()
 	
 		if _, err = outputFile.Write(fileBytes); err != nil {
+			println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving file"})
 			return
 		}
 		baseURL, error := url.Parse(h.config.Domain)
 		if error != nil {
+			println(error.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid domain configuration"})
 			return
 		}
@@ -185,11 +193,13 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 		// Convert to PNG
 		img, _, err2 := image.Decode(bytes.NewReader(fileBytes))
 		if err2 != nil {
+			println(err2.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding image"})
 			return
 		}
 		var buf bytes.Buffer
 		if err = png.Encode(&buf, img); err != nil {
+			println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error encoding PNG"})
 			return
 		}
@@ -199,17 +209,20 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 	filePath := filepath.Join(folderPath, id)
 	outputFile, err := os.Create(filePath)
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating file: " + err.Error()})
 		return
 	}
 	defer outputFile.Close()
 
 	if _, err = outputFile.Write(finalBytes); err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving file"})
 		return
 	}
 	baseURL, err := url.Parse(h.config.Domain)
 	if err != nil {
+		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid domain configuration"})
 		return
 	}
@@ -234,11 +247,13 @@ func (h *APIHandler) DeleteFile(c *gin.Context) {
 	// Use RemoveAll for directories and Remove for files
 	if info.IsDir() {
 		if err := os.RemoveAll(fullPath); err != nil {
+			println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting directory: " + err.Error()})
 			return
 		}
 	} else {
 		if err := os.Remove(fullPath); err != nil {
+			println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting file: " + err.Error()})
 			return
 		}
