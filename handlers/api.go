@@ -180,7 +180,7 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 	format = strings.Split(contentType, "/")[1]
 
 	if format != "" && !models.SupportedTypes.Has(format) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format: " + format})
 		return
 	}
 
