@@ -12,7 +12,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"ImageServer/config"
 	"ImageServer/models"
@@ -146,8 +145,6 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 		return
 	}
 
-	buffer := bytes.Clone(fileBytes[0:512])
-
 	if !models.ConverableTypes.Has(format) {
 		filePath := filepath.Join(folderPath, id + "." + format)
 		outputFile, error := os.Create(filePath)
@@ -175,9 +172,6 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 		
 		return
 	}
-
-	contentType := http.DetectContentType(buffer)
-	format = strings.Split(contentType, "/")[1]
 
 	if format != "" && !models.SupportedTypes.Has(format) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format: " + format})
