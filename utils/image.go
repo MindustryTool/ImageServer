@@ -55,16 +55,19 @@ func ReadImage(filePath, variant string) (image.Image, error) {
 			// ✅ Cached variant found
 			return img, nil
 		}
+		println("Cached variant not found: " + variantPath)
 	}
 
 	// 2. Load original image (with FindImage fallback: .png, .jpg, .webp, .jpeg)
 	img, err := loadImage(filePath)
 	if err != nil {
+		println(err.Error())
 		return nil, err
 	}
 
 
 	if img == nil {
+		println("Image not found: " + filePath)
 		return nil, nil
 	}
 
@@ -74,6 +77,7 @@ func ReadImage(filePath, variant string) (image.Image, error) {
 
 		variantPath := filePath + "." + variant + ".png"
 		if err := saveAsPNG(variantPath, img); err != nil {
+			println(err.Error())
 			return nil, err
 		}
 	}
@@ -85,18 +89,23 @@ func ReadImage(filePath, variant string) (image.Image, error) {
 func loadImage(path string) (image.Image, error) {
 	file, err := FindImage(path)
 	if err != nil {
+		println(err.Error())
 		return nil, err
 	}
 	defer file.Close()
 
 	if file == nil {
+		println("File not found: " + path)
 		return nil, nil
 	}
 
 	img, _, err := image.Decode(file)
+	
 	if err != nil {
+		println(err.Error())
 		return nil, err
 	}
+
 	return img, nil
 }
 
