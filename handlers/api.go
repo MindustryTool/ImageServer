@@ -169,6 +169,8 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 	
 		baseURL.Path = path.Join(baseURL.Path, folder, id+"."+format)
 		c.JSON(http.StatusCreated, gin.H{"url": baseURL.String()})
+
+		println("Uploaded file: " + filePath)
 		
 		return
 	}
@@ -223,6 +225,8 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 
 	baseURL.Path = path.Join(baseURL.Path, folder, id+"."+format)
 	c.JSON(http.StatusCreated, gin.H{"url": baseURL.String()})
+
+	println("Uploaded file: " + filePath)
 }
 
 
