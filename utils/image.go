@@ -51,7 +51,8 @@ func ReadImage(filePath, variant string) (image.Image, error) {
 	// 1. Try to load cached variant if requested
 	if variant != "" {
 		variantPath := filePath + "." + variant + filepath.Ext(filePath)
-		if img, err := loadImage(variantPath); err == nil {
+		img, err := loadImage(variantPath)
+		if err == nil && img != nil {
 			// ✅ Cached variant found
 			return img, nil
 		}
