@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"ImageServer/config"
 	"ImageServer/models"
@@ -234,11 +235,19 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 func (h *APIHandler) DeleteFile(c *gin.Context) {
 	filePath := c.Param("path")
 	fullPath := filepath.Join(h.config.Path, filePath)
+	filePathWithoutExt := strings.TrimSuffix(fullPath, filepath.Ext(fullPath))
+
+	// Delete all file with prefix filePathWithoutExt
+	if err := os.RemoveAll(filePathWithoutExt + "*"); err != nil {
+		println(err.Error())
+		c.JSON(http.StatusOK, gin.H{"error": "Error deleting files: " + err.Error()})
+		return
+	}
 
 	// Get file info to check if it's a directory
 	info, err := os.Stat(fullPath)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		c.JSON(http.StatusOK, gin.H{"error": "File not found"})
 		return
 	}
 
@@ -246,13 +255,13 @@ func (h *APIHandler) DeleteFile(c *gin.Context) {
 	if info.IsDir() {
 		if err := os.RemoveAll(fullPath); err != nil {
 			println(err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting directory: " + err.Error()})
+			c.JSON(http.StatusOK, gin.H{"error": "Error deleting directory: " + err.Error()})
 			return
 		}
 	} else {
 		if err := os.Remove(fullPath); err != nil {
 			println(err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting file: " + err.Error()})
+			c.JSON(http.StatusOK, gin.H{"error": "Error deleting file: " + err.Error()})
 			return
 		}
 	}
