@@ -112,11 +112,13 @@ func loadImage(path string) (image.Image, error) {
 
 // save saves an image as PNG.
 func save(path string, img image.Image, ext string) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path + ext)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
+	println("Save image: " + path + ext)
 
 	switch ext {
 		case ".png":

@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"image/jpeg"
-	"image/png"
 	"net/http"
 	"os"
 	"path"
@@ -93,7 +91,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		c.File(filePath)
 		return
 	}
-	
+
 	variantPath := filePath + "." + variant + filepath.Ext(filePath)
 
 	// If variantPath exists serve it directly
@@ -117,25 +115,8 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusOK)
-	
-	// Encode and send the image in the requested format
-	switch format {
-	case "jpg", "jpeg":
-		c.Header("Content-Type", "image/jpeg")
-		if err := jpeg.Encode(c.Writer, img, &jpeg.Options{Quality: 100}); err != nil {
-			println(err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error encoding JPEG"})
-		}
-	case "png":
-		c.Header("Content-Type", "image/png")
-		if err := png.Encode(c.Writer, img); err != nil {
-			println(err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error encoding PNG"})
-		}
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format: " + format})
-	}
+	c.Status(http.StatusCreated)
+	c.File(variantPath)
 }
 
 // containsPathTraversal checks if the path contains directory traversal sequences
