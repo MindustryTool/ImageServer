@@ -102,7 +102,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 
 	println("Generate variant: " + variantPath)
 	
-	img, err := utils.ReadImage(filePathNoExt, variant)
+	img, err := utils.ReadImage(filePathNoExt, variant, format)
 
 	if err != nil {
 		println(err.Error())
