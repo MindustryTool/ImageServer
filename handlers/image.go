@@ -93,6 +93,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		c.File(filePath)
 		return
 	}
+	
 	variantPath := filePath + "." + variant + filepath.Ext(filePath)
 
 	// If variantPath exists serve it directly
