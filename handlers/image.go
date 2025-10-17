@@ -101,10 +101,10 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		return
 	}
 
+	println("Generate variant: " + variantPath)
+	
 	img, err := utils.ReadImage(filePathNoExt, variant)
 
-
-	
 	if err != nil {
 		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading image"})
