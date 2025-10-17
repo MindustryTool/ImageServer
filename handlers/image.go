@@ -92,7 +92,15 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		return
 	}
 
-	variantPath := filePath + "." + variant + filepath.Ext(filePath)
+	if variant == "" {
+		if _, err = os.Stat(absFilePath); err == nil {
+			c.File(absFilePath)
+			return
+		}
+	}
+
+
+	variantPath := filePath +  "." + variant + "." + format
 
 	// If variantPath exists serve it directly
 	if _, err = os.Stat(variantPath); err == nil {
@@ -102,7 +110,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 
 	println("Generate variant: " + variantPath)
 	
-	img, err := utils.ReadImage(filePathNoExt, variant, format)
+	img, err := utils.ReadImage(filePathNoExt, variant, format, variantPath)
 
 	if err != nil {
 		println(err.Error())

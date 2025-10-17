@@ -47,7 +47,7 @@ func FindImage(filePath string) (*os.File, error) {
 
 // ReadImage loads an image from disk and applies a variant if specified.
 // If the variant already exists, it is returned directly (cached).
-func ReadImage(filePath, variant, ext string) (image.Image, error) {
+func ReadImage(filePath, variant, ext, variantPath string) (image.Image, error) {
 	// 2. Load original image (with FindImage fallback: .png, .jpg, .webp, .jpeg)
 	img, err := loadImage(filePath)
 	if err != nil {
@@ -64,7 +64,6 @@ func ReadImage(filePath, variant, ext string) (image.Image, error) {
 	// 3. Apply variant and cache if requested
 	if variant != "" {
 		img = ApplyVariant(img, variant)
-		variantPath := filePath + "." + variant + "." + ext
 	
 		if err := save(variantPath, img, ext); err != nil {
 			println(err.Error())
@@ -101,13 +100,13 @@ func loadImage(path string) (image.Image, error) {
 
 // save saves an image as PNG.
 func save(path string, img image.Image, ext string) error {
-	f, err := os.Create(path + "." + ext)
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	println("Save image: " + path + "." + ext)
+	println("Save image: " + path)
 
 	switch ext {
 		case "png":
