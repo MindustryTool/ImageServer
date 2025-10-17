@@ -4,6 +4,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -92,8 +93,17 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		c.File(filePath)
 		return
 	}
+	variantPath := filePath + "." + variant + filepath.Ext(filePath)
+
+	// If variantPath exists serve it directly
+	if _, err = os.Stat(variantPath); err == nil {
+		c.File(variantPath)
+		return
+	}
 
 	img, err := utils.ReadImage(filePathNoExt, variant)
+
+
 	
 	if err != nil {
 		println(err.Error())
