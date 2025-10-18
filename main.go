@@ -8,7 +8,6 @@ import (
 	"ImageServer/config"
 	"ImageServer/handlers"
 	"ImageServer/middleware"
-	"ImageServer/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -71,8 +70,6 @@ func main() {
 	})
 
 	log.Printf("Serving %s on port %s\n", dirname, cfg.Port)
-
-	utils.FixAllFiles(cfg)
 
 	// Start server
 	if err := r.Run(":" + cfg.Port); err != nil {
