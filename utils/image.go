@@ -135,7 +135,7 @@ func Scale(img image.Image, size int) image.Image {
 	}
 
 	dst := image.NewRGBA(image.Rect(0, 0, newW, newH))
-	draw.BiLinear.Scale(dst, dst.Bounds(), img, bounds, draw.Over, nil)
+	draw.NearestNeighbor.Scale(dst, dst.Bounds(), img, bounds, draw.Over, nil)
 
 	return dst
 }
