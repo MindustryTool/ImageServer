@@ -96,6 +96,15 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		if _, err = os.Stat(absFilePath); err == nil {
 			c.File(absFilePath)
 			return
+		} else {
+			println("Not found: " + absFilePath)
+		}
+
+		if _, err = os.Stat(filePath); err == nil {
+			c.File(filePath)
+			return
+		} else {
+			println("Not found: " + filePath)
 		}
 	}
 
@@ -106,6 +115,8 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 	if _, err = os.Stat(variantPath); err == nil {
 		c.File(variantPath)
 		return
+	} else {
+		println("Not found: " + variantPath)
 	}
 
 	println("Generate variant: " + variantPath)
