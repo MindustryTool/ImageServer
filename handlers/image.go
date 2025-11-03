@@ -73,17 +73,8 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 	format := path.Ext(filePath)[1:]
 	// Get path without extension
 
-	filePathNoExt := filePath[:len(filePath)-len(filepath.Ext(filePath))]
-
 	if format != "" && !models.SupportedTypes.Has(format) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format: " + format})
-		return
-	}
-
-
-	// Serve the file directly if no conversion is needed
-	if (format == "" || format == "png") && variant == "" {
-		c.File(filePathNoExt)
 		return
 	}
 
@@ -114,7 +105,7 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 
 	println("Generate variant: " + variantPath)
 	
-	img, err := utils.ReadImage(filePathNoExt, variant, format, variantPath)
+	img, err := utils.ReadImage(absFilePath, variant, format, variantPath)
 
 	if err != nil {
 		println(err.Error())
