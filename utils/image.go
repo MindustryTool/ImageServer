@@ -35,7 +35,11 @@ func FindImage(filePath string) (*os.File, error) {
 				if err != nil {
 					file, err = os.Open(filePath + ".jpeg")
 					if err != nil {
-						return nil, nil
+						filePathNoExt := filePath[:len(filePath)-len(filepath.Ext(filePath))]
+						file, err = os.Open(filePathNoExt)
+						if err != nil {
+							return nil, err
+						}
 					}
 				}
 			}
@@ -55,7 +59,6 @@ func ReadImage(filePath, variant, ext, variantPath string) (image.Image, error) 
 		return nil, err
 	}
 
-
 	if img == nil {
 		println("Image not found: " + filePath)
 		return nil, nil
@@ -64,7 +67,7 @@ func ReadImage(filePath, variant, ext, variantPath string) (image.Image, error) 
 	// 3. Apply variant and cache if requested
 	if variant != "" {
 		img = ApplyVariant(img, variant)
-	
+
 		if err := save(variantPath, img, ext); err != nil {
 			println(err.Error())
 			return nil, err
@@ -89,7 +92,7 @@ func loadImage(path string) (image.Image, error) {
 	}
 
 	img, _, err := image.Decode(file)
-	
+
 	if err != nil {
 		println(err.Error())
 		return nil, err
@@ -109,14 +112,14 @@ func save(path string, img image.Image, ext string) error {
 	println("Save image: " + path)
 
 	switch ext {
-		case "png":
-			return png.Encode(f, img)
-		case "jpg", "jpeg":
-			return jpeg.Encode(f, img, nil)
-		// case ".webp":
-		// 	return webp.Encode(f, img, nil)
-		default:
-			return nil
+	case "png":
+		return png.Encode(f, img)
+	case "jpg", "jpeg":
+		return jpeg.Encode(f, img, nil)
+	// case ".webp":
+	// 	return webp.Encode(f, img, nil)
+	default:
+		return nil
 	}
 }
 
@@ -177,25 +180,25 @@ func FixAllFiles(cfg *config.Config) {
 		}
 		defer file.Close()
 		var image image.Image
-		
+
 		switch ext {
-			case ".png":
-				image, err = png.Decode(file)
-				if err != nil {
-					return err
-				}
-			case ".jpg", ".jpeg":
-				image, err = jpeg.Decode(file)
-				if err != nil {
-					return err
-				}
-			case "webp":
-				image, err = webp.Decode(file)
-				if err != nil {
-					return err
-				}
-			default:
-				return nil
+		case ".png":
+			image, err = png.Decode(file)
+			if err != nil {
+				return err
+			}
+		case ".jpg", ".jpeg":
+			image, err = jpeg.Decode(file)
+			if err != nil {
+				return err
+			}
+		case "webp":
+			image, err = webp.Decode(file)
+			if err != nil {
+				return err
+			}
+		default:
+			return nil
 		}
 
 		filePathNoExt := path[:len(path)-len(filepath.Ext(path))]
