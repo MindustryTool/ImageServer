@@ -8,6 +8,7 @@ import (
 	"ImageServer/config"
 	"ImageServer/handlers"
 	"ImageServer/middleware"
+	"ImageServer/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,6 +17,8 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	// Load configuration
 	cfg := config.Load()
+
+	utils.FixAllFiles(cfg)
 
 	// Ensure data directory exists
 	dirname, err := filepath.Abs(cfg.Path)
@@ -48,10 +51,10 @@ func main() {
 			// File operations
 			protected.GET("/files/*path", apiHandler.ListDirectory)
 			protected.DELETE("/files/*path", apiHandler.DeleteFile)
-			
+
 			// Directory operations
 			protected.POST("/directories/*path", apiHandler.CreateDirectory)
-			
+
 			// Image upload
 			protected.POST("/images", apiHandler.UploadImage)
 		}

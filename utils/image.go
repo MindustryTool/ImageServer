@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"golang.org/x/image/draw"
-	"golang.org/x/image/webp"
 )
 
 func ContainsDotFile(name string) bool {
@@ -179,39 +178,17 @@ func FixAllFiles(cfg *config.Config) {
 			return err
 		}
 		defer file.Close()
-		var image image.Image
-
-		switch ext {
-		case ".png":
-			image, err = png.Decode(file)
-			if err != nil {
+		
+		if (ext == ""){
+			// Rename to .png
+			newPath := path + ".png"
+			if err := os.Rename(path, newPath); err != nil {
 				return err
 			}
-		case ".jpg", ".jpeg":
-			image, err = jpeg.Decode(file)
-			if err != nil {
-				return err
-			}
-		case "webp":
-			image, err = webp.Decode(file)
-			if err != nil {
-				return err
-			}
-		default:
-			return nil
+			println("Renamed to .png: " + path)
 		}
-
-		filePathNoExt := path[:len(path)-len(filepath.Ext(path))]
-
-		pngFile, err := os.Create(filePathNoExt)
-		if err != nil {
-			return err
-		}
-		defer pngFile.Close()
-		if err := png.Encode(pngFile, image); err != nil {
-			return err
-		}
-
+		
+		
 		return nil
 	})
 
