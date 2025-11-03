@@ -99,13 +99,6 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		} else {
 			println("Not found: " + absFilePath)
 		}
-
-		if _, err = os.Stat(filePath); err == nil {
-			c.File(filePath)
-			return
-		} else {
-			println("Not found: " + filePath)
-		}
 	}
 
 

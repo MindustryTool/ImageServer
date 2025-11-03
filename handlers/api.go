@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"bytes"
 	"fmt"
-	"image"
-	"image/png"
 	"io"
 	"net/http"
 	"net/url"
@@ -146,80 +143,23 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 		return
 	}
 
-	if !models.ConverableTypes.Has(format) {
-		filePath := filepath.Join(folderPath, id + "." + format)
-		outputFile, error := os.Create(filePath)
-		if error != nil {
-			println(error.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating file: " + error.Error()})
-			return
-		}
-		defer outputFile.Close()
-	
-		if _, err = outputFile.Write(fileBytes); err != nil {
-			println(err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving file"})
-			return
-		}
-		baseURL, error := url.Parse(h.config.Domain)
-		if error != nil {
-			println(error.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid domain configuration"})
-			return
-		}
-	
-		baseURL.Path = path.Join(baseURL.Path, folder, id+"."+format)
-		c.JSON(http.StatusCreated, gin.H{"url": baseURL.String()})
-
-		println("Uploaded file: " + filePath)
-		
-		return
-	}
-
-	if format != "" && !models.SupportedTypes.Has(format) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported format: " + format})
-		return
-	}
-
-
-	var finalBytes []byte
-
-	if format == "png" {
-		finalBytes = fileBytes
-	} else {
-		// Convert to PNG
-		img, _, err2 := image.Decode(bytes.NewReader(fileBytes))
-		if err2 != nil {
-			println(err2.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding image"})
-			return
-		}
-		var buf bytes.Buffer
-		if err = png.Encode(&buf, img); err != nil {
-			println(err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error encoding PNG"})
-			return
-		}
-		finalBytes = buf.Bytes()
-	}
-
-	filePath := filepath.Join(folderPath, id)
-	outputFile, err := os.Create(filePath)
-	if err != nil {
-		println(err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating file: " + err.Error()})
+	filePath := filepath.Join(folderPath, id+"."+format)
+	outputFile, error := os.Create(filePath)
+	if error != nil {
+		println(error.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating file: " + error.Error()})
 		return
 	}
 	defer outputFile.Close()
 
-	if _, err = outputFile.Write(finalBytes); err != nil {
+	if _, err = outputFile.Write(fileBytes); err != nil {
 		println(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving file"})
 		return
 	}
-	baseURL, err := url.Parse(h.config.Domain)
-	if err != nil {
-		println(err.Error())
+	baseURL, error := url.Parse(h.config.Domain)
+	if error != nil {
+		println(error.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid domain configuration"})
 		return
 	}
@@ -229,7 +169,6 @@ func (h *APIHandler) UploadImage(c *gin.Context) {
 
 	println("Uploaded file: " + filePath)
 }
-
 
 // DeleteFile handles DELETE /api/v1/files/*path
 func (h *APIHandler) DeleteFile(c *gin.Context) {
