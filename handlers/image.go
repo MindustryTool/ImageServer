@@ -118,6 +118,13 @@ func (h *ImageHandler) ServeImage(c *gin.Context) {
 		return
 	}
 
+	if _, err = os.Stat(variantPath); err == nil {
+		c.File(variantPath)
+		return
+	} else {
+		println("Not found after create: " + variantPath)
+	}
+
 	c.Status(http.StatusCreated)
 	c.File(variantPath)
 }
